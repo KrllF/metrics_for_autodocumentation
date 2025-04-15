@@ -2,15 +2,15 @@ package app
 
 import (
 	"fmt"
-
-	"github.com/KrllF/metrics_for_autodocumentation/internal/entity"
 )
 
-func (a *App) Run(sourceFile, mdFile string) (entity.Stat, error) {
-	ret, err := a.hand.Run(sourceFile, mdFile)
+func (a *App) Run(sourceFile, mdFile string) error {
+	stat, err := a.hand.Run(sourceFile, mdFile)
 	if err != nil {
-		return entity.Stat{}, fmt.Errorf("a.hand.Run: %w", err)
+		return fmt.Errorf("a.hand.Run: %w", err)
 	}
+	fmt.Printf("количество непокрытых функций: %d,\nколичество некорректных функций в md: %d,\nпокрытие: %v",
+		stat.UnCovered, stat.InCorrect, stat.Coverage)
 
-	return ret, nil
+	return nil
 }
