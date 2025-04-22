@@ -1,37 +1,62 @@
 package checkStruct
 
 import (
+	"context"
 	"slices"
 	"sort"
 )
 
 func (s *Service) EqualStruct(sourceFile, mdFile string) (bool, error) {
-	sourceM := s.ListDirByWalk(sourceFile)
-	mdM := s.ListDirByWalk(mdFile)
+	return s.EqualStructContext(context.Background(), sourceFile, mdFile)
+}
 
-	// TODO: на данный момент только
-	// базовая проверка на равенство структур
-	// + не оптимально
-	// сгенерированного файла и исходного проекта
-	// просто по ключам в получившихся мапах
-	// при обходе ListDirByWalk
-	keySource := make([]string, len(sourceM))
-	keyM := make([]string, len(mdM))
+func (s *Service) EqualStructContext(ctx context.Context, sourceFile, mdFile string) (bool, error) {
+	sourceM, err := s.ListDirByWalkContext(ctx, sourceFile)
+	if err != nil {
+		return false, err
+	}
+
+	mdM, err := s.ListDirByWalkContext(ctx, mdFile)
+	if err != nil {
+		return false, err
+	}
+
+	// Compare structure
+	keySource := make([]string, 0, len(sourceM))
+	keyMd := make([]string, 0, len(mdM))
 
 	for key := range sourceM {
 		keySource = append(keySource, key)
 	}
 
 	for key := range mdM {
-		keyM = append(keyM, key)
+		keyMd = append(keyMd, key)
 	}
 
-	if len(keySource) != len(keyM) {
+	if len(keySource) != len(keyMd) {
 		return false, nil
 	}
 
 	sort.Strings(keySource)
-	sort.Strings(keyM)
+	sort.Strings(keyMd)
 
-	return slices.Equal(keyM, keySource), nil
+	if !slices.Equal(keyMd, keySource) {
+		return false, nil
+	}
+
+	// Compare contents (simplified)
+	for key, sourceFiles := range sourceM {
+		mdFiles := mdM[key]
+		if len(sourceFiles) != len(mdFiles) {
+			return false, nil
+		}
+
+		sort.Strings(sourceFiles)
+		sort.Strings(mdFiles)
+		if !slices.Equal(mdFiles, sourceFiles) {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
