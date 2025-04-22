@@ -1,4 +1,4 @@
-package helper
+package golang
 
 import "github.com/KrllF/metrics_for_autodocumentation/internal/entity"
 
