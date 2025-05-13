@@ -6,14 +6,13 @@ import (
 	"path/filepath"
 )
 
-func (s *Service) ListDirByWalk(path string) map[string][]string {
+func (s *Service) ListDirByWalk(path string, isSource bool) map[string][]string {
 	mp := make(map[string][]string)
 
 	path = filepath.Clean(path)
-
 	rootDirName := filepath.Base(path)
 
-	filepath.Walk(path, func(wPath string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(path, func(wPath string, info os.FileInfo, err error) error {
 		if err != nil {
 			fmt.Printf("Ошибка при обходе %q: %v\n", wPath, err)
 			return err
@@ -23,43 +22,52 @@ func (s *Service) ListDirByWalk(path string) map[string][]string {
 			return nil
 		}
 
-		if info.IsDir() && info.Name() == ".git" {
+		if info.IsDir() && shouldSkipDir(info.Name()) {
 			return filepath.SkipDir
+		}
+
+		if !info.IsDir() && isSource && !isSourceFile(info.Name()) {
+			return nil
 		}
 
 		relPath, err := filepath.Rel(path, wPath)
 		if err != nil {
-			fmt.Printf("filepath.Rel %q: %v\n", wPath, err)
 			return err
 		}
 
-		key := filepath.Join(rootDirName, relPath)
+		key := filepath.Join(rootDirName, filepath.Dir(relPath))
 
 		if info.IsDir() {
-			mp[key] = []string{}
-			parentDir := filepath.Dir(wPath)
-			relParentDir, err := filepath.Rel(path, parentDir)
-			if err != nil {
-				fmt.Printf("filepath.Rel %q: %v\n", parentDir, err)
-				return err
-			}
-			parentDirKey := filepath.Join(rootDirName, relParentDir)
-			mp[parentDirKey] = append(mp[parentDirKey], info.Name())
-
-			return nil
+			mp[filepath.Join(rootDirName, relPath)] = []string{}
+		} else {
+			mp[key] = append(mp[key], info.Name())
 		}
-
-		dir := filepath.Dir(wPath)
-		relDir, err := filepath.Rel(path, dir)
-		if err != nil {
-			fmt.Printf("filepath.Rel %q: %v\n", dir, err)
-			return err
-		}
-		dirKey := filepath.Join(rootDirName, relDir)
-		mp[dirKey] = append(mp[dirKey], info.Name())
 
 		return nil
 	})
 
 	return mp
+}
+
+func isSourceFile(name string) bool {
+	ext := filepath.Ext(name)
+	switch ext {
+	case ".go", ".py":
+		return true
+	default:
+		return false
+	}
+}
+
+func shouldSkipDir(name string) bool {
+	skip := []string{
+		".git", ".github", ".idea", ".vscode", "docs", "build", "testdata", "__pycache__", ".devcontainer",
+	}
+	for _, s := range skip {
+		if name == s {
+			return true
+		}
+	}
+
+	return false
 }

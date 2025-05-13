@@ -6,11 +6,15 @@ type (
 	Service interface {
 		GetMetrics(sourceFile, mdFile string) (entity.Stat, error)
 	}
+	ServiceStruct interface {
+		EqualStruct(sourceFile, mdFile string) (entity.StructStat, error)
+	}
 	Handler struct {
-		serv Service
+		servGo     Service
+		servStruct ServiceStruct
 	}
 )
 
-func NewHandler(serv Service) *Handler {
-	return &Handler{serv: serv}
+func NewHandler(serv Service, servStruct ServiceStruct) *Handler {
+	return &Handler{servGo: serv, servStruct: servStruct}
 }

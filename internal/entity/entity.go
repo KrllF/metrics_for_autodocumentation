@@ -5,3 +5,8 @@ type Stat struct {
 	InCorrect int64
 	Coverage  float64
 }
+
+type StructStat struct {
+	CoverageStruct   float64
+	OkCoverageStruct bool
+}
